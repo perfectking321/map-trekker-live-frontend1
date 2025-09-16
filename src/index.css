@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Marauder's Map Bus Tracking Design System
+Light theme with clean, modern transit-inspired aesthetics
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Base Light Theme */
+    --background: 0 0% 100%;
+    --foreground: 224 71% 4%;
+
+    /* Surface Colors */
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+
+    /* Brand Colors - Professional Blues & Teals */
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 221 70% 60%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 84% 5%;
+
+    /* Interactive Elements */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 84% 5%;
+
+    /* Status Colors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --warning: 48 96% 53%;
+
+    /* Form Elements */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+
+    /* Map & Transport Colors */
+    --bus-stop: 142 76% 36%;
+    --bus-route: 221 83% 53%;
+    --highway-primary: 48 96% 53%;
+    --highway-secondary: 280 100% 70%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(0, 0%, 100%), hsl(210, 40%, 98%));
+    --gradient-accent: linear-gradient(135deg, hsl(221, 83%, 53%), hsl(195, 100%, 50%));
+    --gradient-card: linear-gradient(135deg, hsl(0, 0%, 100%), hsl(210, 40%, 96%));
+
+    /* Shadows & Effects */
+    --shadow-glow: 0 0 20px hsl(221, 83%, 53%, 0.2);
+    --shadow-card: 0 4px 20px hsl(0, 0%, 0%, 0.1);
+    --shadow-marker: 0 0 15px hsl(142, 76%, 36%, 0.4);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.75rem;
+
+    /* Sidebar for light theme */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 224 71% 4%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 84% 5%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 221 83% 53%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Dark theme variables */
+@layer base {
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 210 40% 98%;
+
+    --card: 224 71% 6%;
+    --card-foreground: 210 40% 98%;
+    --popover: 224 71% 6%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 217 80% 66%;
+
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 215 28% 17%;
+    --muted-foreground: 217 32% 75%;
+    --accent: 215 28% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 70% 40%;
+    --warning: 48 96% 53%;
+
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 217 91% 60%;
+
+    --bus-stop: 142 60% 45%;
+    --bus-route: 217 91% 60%;
+    --highway-primary: 48 96% 53%;
+    --highway-secondary: 280 100% 75%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(224, 71%, 6%), hsl(215, 28%, 17%));
+    --gradient-accent: linear-gradient(135deg, hsl(217, 91%, 60%), hsl(195, 100%, 50%));
+    --gradient-card: linear-gradient(135deg, hsl(224, 71%, 6%), hsl(215, 28%, 17%));
+
+    --shadow-glow: 0 0 20px hsl(217, 91%, 60%, 0.25);
+    --shadow-card: 0 4px 20px hsl(0, 0%, 0%, 0.35);
+    --shadow-marker: 0 0 15px hsl(142, 60%, 45%, 0.45);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 224 71% 6%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 28% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 215 28% 12%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
