@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -56,7 +56,7 @@ const Index = () => {
                   <div className="flex items-center gap-3"><UsersIcon className="h-4 w-4 text-muted-foreground" /><span>Crowd density reporting</span></div>
                   <div className="flex items-center gap-3"><Bus className="h-4 w-4 text-muted-foreground" /><span>Bus status updates</span></div>
                 </div>
-                <Button onClick={() => navigate('/driver')} className="w-full">Access Driver Dashboard</Button>
+                <Button onClick={() => navigate('/auth/driver')} className="w-full">Access Driver Dashboard</Button>
               </CardContent>
             </Card>
 
@@ -75,7 +75,7 @@ const Index = () => {
                   <div className="flex items-center gap-3"><MapPin className="h-4 w-4 text-muted-foreground" /><span>ETA predictions</span></div>
                   <div className="flex items-center gap-3"><UsersIcon className="h-4 w-4 text-muted-foreground" /><span>Crowd density indicators</span></div>
                 </div>
-                <Button onClick={() => navigate('/user')} className="w-full">Start Tracking Buses</Button>
+                <Button onClick={() => navigate('/auth/user')} className="w-full">Start Tracking Buses</Button>
               </CardContent>
             </Card>
 
@@ -92,7 +92,7 @@ const Index = () => {
                 <div className="space-y-3 text-sm mb-6">
                   <div className="flex items-center gap-3"><Bus className="h-4 w-4 text-muted-foreground" /><span>Fleet monitoring</span></div>
                   <div className="flex items-center gap-3"><Navigation className="h-4 w-4 text-muted-foreground" /><span>Route optimization</span></div>
-                  <div className="flex items-center gap-3"><Shield className="h-4 w-4 text-muted-foreground" /><span>Predictive analytics</span></div>
+                  <div className="flex items-.center gap-3"><Shield className="h-4 w-4 text-muted-foreground" /><span>Predictive analytics</span></div>
                 </div>
                 <Button onClick={() => navigate('/admin')} className="w-full">Access Admin Dashboard</Button>
               </CardContent>

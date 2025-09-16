@@ -4,7 +4,8 @@ import { Toaster } from '@/components/ui/toaster';
 import Index from './pages/Index';
 import UserPage from './pages/UserPage';
 import DriverInterface from './pages/DriverInterface';
-import AdminInterface from './pages/AdminInterface'; // Corrected import
+import AdminInterface from './pages/AdminInterface';
+import AuthPage from './pages/AuthPage';
 
 const App = () => {
   return (
@@ -13,7 +14,8 @@ const App = () => {
         <Route path="/" element={<Index />} />
         <Route path="/user" element={<UserPage />} />
         <Route path="/driver" element={<DriverInterface />} />
-        <Route path="/admin" element={<AdminInterface />} /> {/* Corrected component */}
+        <Route path="/admin" element={<AdminInterface />} />
+        <Route path="/auth/:userType" element={<AuthPage />} />
       </Routes>
       <Toaster />
     </Router>
