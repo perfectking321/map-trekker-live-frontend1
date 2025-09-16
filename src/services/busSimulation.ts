@@ -1,158 +1,135 @@
 
-import { LiveBus, BusRoute } from '@/types/bus';
+import { LiveBus, BusRoute, BusStop } from '../types/bus';
+import rawBusStops from '../data.json';
 
-class BusSimulationService {
-  private buses: Map<string, LiveBus> = new Map();
-  private routes: BusRoute[] = [];
-  private simulationInterval: NodeJS.Timeout | null = null;
+const activeBuses = new Map<string, LiveBus>();
+const busRoutes: BusRoute[] = [];
+let simulationInterval: NodeJS.Timeout | null = null;
 
-  constructor() {
-    this.initializeBhopalRoutes();
-    this.initializeBuses();
+const allBusStops: BusStop[] = rawBusStops.bus_stops.features.map((feature: any) => {
+  const [lng, lat] = feature.geometry.replace('SRID=4326;POINT (', '').replace(')', '').split(' ').map(Number);
+  return {
+    id: feature.id.toString(),
+    name: feature.properties.name || 'Unnamed Stop',
+    location: [lng, lat],
+  };
+});
+
+function initializeRoutes() {
+  if (busRoutes.length > 0) return;
+
+  const route1Stops = ['1', '31', '32', '33', '34', '35'].map(id => allBusStops.find(s => s.id === id)!);
+  busRoutes.push({
+    id: 'route-1',
+    name: 'SRM University Loop',
+    stops: route1Stops,
+    path: route1Stops.map(s => s.location),
+  });
+
+  const route2Stops = ['2', '16', '17', '47', '48'].map(id => allBusStops.find(s => s.id === id)!);
+  busRoutes.push({
+    id: 'route-2',
+    name: 'Tambaram Station Run',
+    stops: route2Stops,
+    path: route2Stops.map(s => s.location),
+  });
+}
+
+function simulateBusMovement(bus: LiveBus) {
+  const route = busRoutes.find(r => r.id === bus.routeId);
+  if (!route) return;
+
+  const nextStop = route.stops[bus.nextStopIndex];
+  if (!nextStop) {
+    bus.nextStopIndex = 0; // Loop back to the start
+    return;
   }
+  const [busLng, busLat] = bus.location;
+  const [stopLng, stopLat] = nextStop.location;
 
-  private initializeBhopalRoutes() {
-    this.routes = [
-      {
-        id: 'route_1',
-        name: 'New Market - MP Nagar',
-        stops: [
-          { id: 'stop_1', name: 'New Market Bus Stand', location: [23.2599, 77.4126], order: 1 },
-          { id: 'stop_2', name: 'Bhopal Junction', location: [23.2470, 77.4014], order: 2 },
-          { id: 'stop_3', name: 'MP Nagar Bus Stop', location: [23.2728, 77.4285], order: 3 }
-        ],
-        path: [
-          [23.2599, 77.4126],
-          [23.2550, 77.4100],
-          [23.2500, 77.4050],
-          [23.2470, 77.4014],
-          [23.2500, 77.4100],
-          [23.2600, 77.4200],
-          [23.2728, 77.4285]
-        ]
-      },
-      {
-        id: 'route_2',
-        name: 'Habibganj - ISBT',
-        stops: [
-          { id: 'stop_4', name: 'Habibganj Railway Station', location: [23.2156, 77.3910], order: 1 },
-          { id: 'stop_5', name: 'ISBT Bhopal', location: [23.2156, 77.4367], order: 2 }
-        ],
-        path: [
-          [23.2156, 77.3910],
-          [23.2156, 77.4000],
-          [23.2156, 77.4200],
-          [23.2156, 77.4367]
-        ]
-      }
+  if (Math.abs(busLat - stopLat) < 0.0001 && Math.abs(busLng - stopLng) < 0.0001) {
+    bus.nextStopIndex = (bus.nextStopIndex + 1) % route.stops.length;
+  } else {
+    const moveFactor = 0.1;
+    bus.location = [
+      busLng + (stopLng - busLng) * moveFactor,
+      busLat + (stopLat - busLat) * moveFactor,
     ];
-  }
-
-  private initializeBuses() {
-    const busData: Omit<LiveBus, 'lastUpdated'>[] = [
-      {
-        id: 'BUS_001',
-        route: 'New Market - MP Nagar',
-        currentLocation: [23.2599, 77.4126],
-        destination: 'MP Nagar Bus Stop',
-        nextStop: 'Bhopal Junction',
-        etaToNextStop: 8,
-        crowdLevel: 'medium',
-        speed: 25,
-        direction: 45
-      },
-      {
-        id: 'BUS_002',
-        route: 'New Market - MP Nagar',
-        currentLocation: [23.2500, 77.4050],
-        destination: 'MP Nagar Bus Stop',
-        nextStop: 'MP Nagar Bus Stop',
-        etaToNextStop: 12,
-        crowdLevel: 'high',
-        speed: 20,
-        direction: 60
-      },
-      {
-        id: 'BUS_003',
-        route: 'Habibganj - ISBT',
-        currentLocation: [23.2156, 77.4000],
-        destination: 'ISBT Bhopal',
-        nextStop: 'ISBT Bhopal',
-        etaToNextStop: 15,
-        crowdLevel: 'low',
-        speed: 30,
-        direction: 90
-      }
-    ];
-
-    busData.forEach(bus => {
-      this.buses.set(bus.id, { ...bus, lastUpdated: new Date() });
-    });
-  }
-
-  startSimulation(callback: (buses: LiveBus[]) => void) {
-    if (this.simulationInterval) return;
-
-    this.simulationInterval = setInterval(() => {
-      this.updateBusPositions();
-      callback(Array.from(this.buses.values()));
-    }, 3000); // Update every 3 seconds
-
-    // Initial callback
-    callback(Array.from(this.buses.values()));
-  }
-
-  stopSimulation() {
-    if (this.simulationInterval) {
-      clearInterval(this.simulationInterval);
-      this.simulationInterval = null;
-    }
-  }
-
-  private updateBusPositions() {
-    this.buses.forEach((bus, busId) => {
-      // Simple simulation: move bus slightly along route
-      const route = this.routes.find(r => r.name === bus.route);
-      if (!route) return;
-
-      // Move bus position slightly (simulate movement)
-      const [lat, lng] = bus.currentLocation;
-      const newLat = lat + (Math.random() - 0.5) * 0.001; // Small random movement
-      const newLng = lng + (Math.random() - 0.5) * 0.001;
-
-      // Update ETA (decrease by 1 minute, reset if reaches 0)
-      let newEta = bus.etaToNextStop - 1;
-      if (newEta <= 0) {
-        newEta = Math.floor(Math.random() * 15) + 5; // Random ETA between 5-20 minutes
-      }
-
-      // Randomly update crowd level
-      const crowdLevels: ('low' | 'medium' | 'high')[] = ['low', 'medium', 'high'];
-      const newCrowdLevel = Math.random() > 0.8 ? 
-        crowdLevels[Math.floor(Math.random() * crowdLevels.length)] : 
-        bus.crowdLevel;
-
-      this.buses.set(busId, {
-        ...bus,
-        currentLocation: [newLat, newLng],
-        etaToNextStop: newEta,
-        crowdLevel: newCrowdLevel,
-        lastUpdated: new Date()
-      });
-    });
-  }
-
-  getBuses(): LiveBus[] {
-    return Array.from(this.buses.values());
-  }
-
-  getBusById(id: string): LiveBus | undefined {
-    return this.buses.get(id);
-  }
-
-  getRoutes(): BusRoute[] {
-    return this.routes;
   }
 }
 
-export default new BusSimulationService();
+function updateBusPositions() {
+  activeBuses.forEach(simulateBusMovement);
+}
+
+function initializeDefaultBuses() {
+  if (activeBuses.size > 0) return;
+
+  // Start a bus on Route 1
+  const route1 = busRoutes[0];
+  const bus1: LiveBus = {
+    id: 'default-bus-1',
+    routeId: route1.id,
+    location: [...route1.stops[0].location],
+    speed: 40,
+    nextStopIndex: 1,
+    crowdLevel: 'low',
+  };
+  activeBuses.set(bus1.id, bus1);
+
+  // Start a bus on Route 2
+  const route2 = busRoutes[1];
+  const bus2: LiveBus = {
+    id: 'default-bus-2',
+    routeId: route2.id,
+    location: [...route2.stops[2].location], // Start at a different stop
+    speed: 35,
+    nextStopIndex: 3,
+    crowdLevel: 'medium',
+  };
+  activeBuses.set(bus2.id, bus2);
+}
+
+export function startBusSimulation(driverId: string, routeId: string) {
+  const route = busRoutes.find(r => r.id === routeId);
+  if (!route) throw new Error('Route not found');
+
+  const newBus: LiveBus = {
+    id: driverId,
+    routeId,
+    location: [...route.stops[0].location],
+    speed: 30,
+    nextStopIndex: 1,
+    crowdLevel: 'low',
+  };
+
+  activeBuses.set(driverId, newBus);
+}
+
+export function stopBusSimulation(driverId: string) {
+  activeBuses.delete(driverId);
+}
+
+export function updateCrowdLevel(driverId: string, crowdLevel: 'low' | 'medium' | 'high') {
+  const bus = activeBuses.get(driverId);
+  if (bus) {
+    bus.crowdLevel = crowdLevel;
+  }
+}
+
+export function getAvailableRoutes(): BusRoute[] {
+  return busRoutes;
+}
+
+export function getLiveBuses(): LiveBus[] {
+  return Array.from(activeBuses.values());
+}
+
+// Initialize and start the simulation
+(function start() {
+  initializeRoutes();
+  initializeDefaultBuses();
+  if (!simulationInterval) {
+    simulationInterval = setInterval(updateBusPositions, 2000);
+  }
+})();

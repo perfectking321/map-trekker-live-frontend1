@@ -1,25 +1,30 @@
-
-export interface LiveBus {
+/**
+ * Represents a single bus stop, with a unique ID, name, and geographic location.
+ */
+export interface BusStop {
   id: string;
-  route: string;
-  currentLocation: [number, number]; // [lat, lng]
-  destination: string;
-  nextStop: string;
-  etaToNextStop: number; // minutes
-  crowdLevel: 'low' | 'medium' | 'high';
-  speed: number; // km/h
-  direction: number; // degrees
-  lastUpdated: Date;
+  name: string;
+  location: [number, number]; // [longitude, latitude]
 }
 
+/**
+ * Defines a bus route, including its name, an ordered list of stops, and the geographic path.
+ */
 export interface BusRoute {
   id: string;
   name: string;
-  stops: Array<{
-    id: string;
-    name: string;
-    location: [number, number];
-    order: number;
-  }>;
-  path: [number, number][]; // Route coordinates
+  stops: BusStop[];
+  path: [number, number][]; // A list of coordinates [lng, lat] that form the route's path.
+}
+
+/**
+ * Represents the real-time data of an active bus.
+ */
+export interface LiveBus {
+  id: string; // Unique ID for the bus, can be linked to the driver.
+  routeId: string;
+  location: [number, number]; // Current [longitude, latitude]
+  speed: number; // Speed in km/h, used for ETA calculations.
+  nextStopIndex: number; // The index of the next stop in the BusRoute's stops array.
+  crowdLevel: 'low' | 'medium' | 'high'; // Crowd level reported by the driver.
 }

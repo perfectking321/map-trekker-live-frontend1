@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapIcon, Settings, Info } from 'lucide-react';
+import { MapIcon, Settings, Info, UserCircle } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import ApiService from '@/services/api';
+import DriverInterface from '../DriverInterface/DriverInterface';
 
 interface HeaderProps {
   onApiUrlChange?: (url: string) => void;
@@ -45,6 +46,23 @@ const Header: React.FC<HeaderProps> = ({ onApiUrlChange }) => {
           <div className="flex items-center gap-2">
             {/* Theme Toggle */}
             <ThemeToggle />
+
+            {/* Driver Mode */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <UserCircle className="w-4 h-4 mr-2" />
+                  Driver Mode
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Driver Interface</DialogTitle>
+                </DialogHeader>
+                <DriverInterface />
+              </DialogContent>
+            </Dialog>
+
             {/* API Configuration */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
