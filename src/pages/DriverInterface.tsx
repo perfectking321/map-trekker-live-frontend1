@@ -1,13 +1,11 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, MapPin, Users, LogOut } from 'lucide-react';
+import { MapPin, Users, LogOut } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -16,112 +14,141 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { getAuth, signOut, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, setDoc, updateDoc } from "firebase/firestore";
+import { app } from '@/firebase';
 
 const DriverInterface = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [crowdLevel, setCrowdLevel] = useState<'low' | 'medium' | 'high'>('low');
+  const [driverId, setDriverId] = useState<string | null>(null);
+  const locationWatchId = useRef<number | null>(null);
 
-  // --- Login & Registration State ---
-  const [isLoginView, setIsLoginView] = useState(true);
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [registerData, setRegisterData] = useState({ email: '', password: '', busId: '' });
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Frontend-only login simulation
-    if (loginData.email && loginData.password) {
-      setIsLoggedIn(true);
-      toast({ title: "Login Successful", description: "Welcome back, driver!" });
-    } else {
-      toast({ title: "Error", description: "Please enter email and password.", variant: "destructive" });
-    }
-  };
+  // Check auth state and set driverId
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setDriverId(user.uid);
+        // Initialize or fetch bus data from Firestore for this driver
+        // For MVP, we'll just ensure a doc exists for this driverId
+        const driverDocRef = doc(db, "busLocations", user.uid);
+        setDoc(driverDocRef, { 
+          driverId: user.uid, 
+          latitude: null, 
+          longitude: null, 
+          crowdLevel: 'low',
+          isSharingLocation: false,
+          timestamp: new Date()
+        }, { merge: true });
 
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Frontend-only registration simulation
-    if (registerData.email && registerData.password && registerData.busId) {
-      setIsLoggedIn(true);
-      toast({ title: "Registration Successful", description: `Welcome, driver of bus ${registerData.busId}!` });
-    } else {
-      toast({ title: "Error", description: "Please fill out all fields.", variant: "destructive" });
-    }
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setIsSharing(false);
-    toast({ title: "Logged Out", description: "You have successfully logged out." });
-  };
-
-  const handleSharingToggle = (sharing: boolean) => {
-    setIsSharing(sharing);
-    const status = sharing ? "started" : "stopped";
-    toast({
-      title: `Location Sharing ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-      description: `You have ${status} sharing your location.`,
+      } else {
+        setDriverId(null);
+        navigate('/auth/driver'); // Redirect to auth if not logged in
+      }
     });
+    return () => unsubscribe();
+  }, [auth, db, navigate]);
+
+  // Handle location sharing
+  useEffect(() => {
+    if (!driverId) return;
+
+    const updateLocationInFirestore = async (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+      const driverDocRef = doc(db, "busLocations", driverId);
+      await updateDoc(driverDocRef, {
+        latitude,
+        longitude,
+        timestamp: new Date(),
+      });
+    };
+
+    if (isSharing) {
+      if ("geolocation" in navigator) {
+        locationWatchId.current = navigator.geolocation.watchPosition(
+          updateLocationInFirestore,
+          (error) => {
+            console.error("Geolocation error:", error);
+            toast({
+              title: "Geolocation Error",
+              description: error.message,
+              variant: "destructive",
+            });
+            setIsSharing(false); // Stop sharing on error
+          },
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+        );
+        toast({ title: "Location Sharing Started", description: "Your live location is now being shared." });
+      } else {
+        toast({ title: "Error", description: "Geolocation is not supported by your browser.", variant: "destructive" });
+        setIsSharing(false);
+      }
+    } else {
+      if (locationWatchId.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchId.current);
+        locationWatchId.current = null;
+        toast({ title: "Location Sharing Stopped", description: "You have stopped sharing your location." });
+      }
+      // Update Firestore to reflect that sharing has stopped
+      const driverDocRef = doc(db, "busLocations", driverId);
+      updateDoc(driverDocRef, { isSharingLocation: false });
+    }
+
+    return () => {
+      if (locationWatchId.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchId.current);
+      }
+    };
+  }, [isSharing, driverId, db, toast]);
+
+  // Handle crowd level change
+  useEffect(() => {
+    if (!driverId) return;
+
+    const updateCrowdLevelInFirestore = async () => {
+      const driverDocRef = doc(db, "busLocations", driverId);
+      await updateDoc(driverDocRef, {
+        crowdLevel,
+      });
+    };
+    updateCrowdLevelInFirestore();
+  }, [crowdLevel, driverId, db]);
+
+  const handleSharingToggle = (checked: boolean) => {
+    setIsSharing(checked);
+    if (driverId) {
+      const driverDocRef = doc(db, "busLocations", driverId);
+      updateDoc(driverDocRef, { isSharingLocation: checked });
+    }
   };
 
-  // --- Render Login/Registration Page ---
-  if (!isLoggedIn) {
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Logged Out", description: "You have successfully logged out." });
+      navigate('/'); // Redirect to home or auth page after logout
+    } catch (error: any) {
+      toast({
+        title: "Error logging out",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!driverId) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="absolute top-4 left-4">
-          <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+            <p>Loading driver data or redirecting...</p>
         </div>
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>{isLoginView ? 'Driver Login' : 'Driver Registration'}</CardTitle>
-            <CardDescription>
-              {isLoginView ? 'Enter your credentials to access the dashboard.' : 'Create an account to get started.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoginView ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" placeholder="driver@example.com" value={loginData.email} onChange={(e) => setLoginData({ ...loginData, email: e.target.value })} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input id="login-password" type="password" placeholder="********" value={loginData.password} onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} required />
-                </div>
-                <Button type="submit" className="w-full">Login</Button>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reg-email">Email</Label>
-                  <Input id="reg-email" type="email" placeholder="driver@example.com" value={registerData.email} onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password">Password</Label>
-                  <Input id="reg-password" type="password" placeholder="********" value={registerData.password} onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bus-id">Bus ID</Label>
-                  <Input id="bus-id" placeholder="e.g., BUS-001" value={registerData.busId} onChange={(e) => setRegisterData({ ...registerData, busId: e.target.value })} required />
-                </div>
-                <Button type="submit" className="w-full">Register</Button>
-              </form>
-            )}
-            <Button variant="link" className="mt-4 w-full" onClick={() => setIsLoginView(!isLoginView)}>
-            {isLoginView ? 'Dont have an account? Register' : 'Already have an account? Login'}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     );
   }
 
-  // --- Render Driver Dashboard ---
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="flex items-center justify-between p-4 border-b border-border shadow-sm">
@@ -175,4 +202,3 @@ const DriverInterface = () => {
 };
 
 export default DriverInterface;
-
