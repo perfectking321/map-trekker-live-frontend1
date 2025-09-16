@@ -1,4 +1,6 @@
+
 import axios from 'axios';
+import mockData from '../data.json';
 
 export interface BusStopProperties {
   name: string;
@@ -56,7 +58,7 @@ class ApiService {
       }
       
       console.warn('Invalid API response structure:', response.data);
-      return this.getMockBhopalBusStops(); // Use Bhopal data as fallback
+      return this.getMockBusStops();
       
     } catch (error) {
       console.error('Error fetching bus stops:', error);
@@ -65,35 +67,30 @@ class ApiService {
         console.error('Data:', error.response?.data);
         console.error('URL:', error.config?.url);
       }
-      // Return Bhopal mock data for development
-      return this.getMockBhopalBusStops();
+      
+      return this.getMockBusStops();
     }
   }
 
   // Convert API response to GeoJSON format
   private convertToGeoJSON(data: any[]): BusStopsGeoJSON {
     const features = data.map((item, index) => {
-      // Try to extract coordinates and name from different possible structures
       let coordinates: [number, number];
       let name: string;
       let osm_id: string;
       let highway: string;
 
-      // Handle different API response structures
-      if (item.coordinates) {
-        coordinates = [item.coordinates.lng || item.coordinates.longitude, item.coordinates.lat || item.coordinates.latitude];
-      } else if (item.lat && item.lng) {
-        coordinates = [item.lng, item.lat];
-      } else if (item.latitude && item.longitude) {
-        coordinates = [item.longitude, item.latitude];
+      if (item.geometry && typeof item.geometry === 'string') {
+        const pointString = item.geometry.split(';')[1];
+        const coords = pointString.replace('POINT (', '').replace(')', '').split(' ');
+        coordinates = [parseFloat(coords[0]), parseFloat(coords[1])];
       } else {
-        // Default to Bhopal center if no coordinates
         coordinates = [77.4126, 23.2599];
       }
 
-      name = item.name || item.stop_name || item.title || `Bus Stop ${index + 1}`;
-      osm_id = item.osm_id || item.id || `api_${index}`;
-      highway = item.highway || item.road_type || 'primary';
+      name = item.properties.name || `Bus Stop ${item.id}`;
+      osm_id = item.id.toString();
+      highway = item.properties.highway || 'primary';
 
       return {
         type: 'Feature' as const,
@@ -130,11 +127,18 @@ class ApiService {
         return this.convertToGeoJSON(response.data);
       }
       
-      return this.getMockBhopalBusStops();
+      const mockData = this.getMockBusStops();
+      const filtered = {
+        ...mockData,
+        features: mockData.features.filter(feature => 
+          feature.properties.name.toLowerCase().includes(query.toLowerCase())
+        )
+      };
+      return filtered;
     } catch (error) {
       console.error('Error searching bus stops:', error);
-      // Filter Bhopal mock data for development
-      const mockData = this.getMockBhopalBusStops();
+      
+      const mockData = this.getMockBusStops();
       const filtered = {
         ...mockData,
         features: mockData.features.filter(feature => 
@@ -163,10 +167,10 @@ class ApiService {
         return this.convertToGeoJSON(response.data);
       }
       
-      return this.getMockBhopalBusStops();
+      return this.getMockBusStops();
     } catch (error) {
       console.error('Error filtering bus stops:', error);
-      return this.getMockBhopalBusStops();
+      return this.getMockBusStops();
     }
   }
 
@@ -188,86 +192,17 @@ class ApiService {
       }
       
       console.warn('Invalid API response structure:', response.data);
-      return this.getMockBhopalBusStops();
+      return this.getMockBusStops();
       
     } catch (error) {
       console.error(`Error fetching bus stops for ${city}:`, error);
-      return this.getMockBhopalBusStops();
+      return this.getMockBusStops();
     }
   }
 
-  // Mock data for development/demo - Now returns Bhopal data
+  // Mock data for development/demo
   private getMockBusStops(): BusStopsGeoJSON {
-    return this.getMockBhopalBusStops();
-  }
-
-  // Mock data for Bhopal area
-  private getMockBhopalBusStops(): BusStopsGeoJSON {
-    return {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [77.4126, 23.2599] // Bhopal coordinates
-          },
-          properties: {
-            name: 'New Market Bus Stand',
-            osm_id: 'bhopal_001',
-            highway: 'primary'
-          }
-        },
-        {
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [77.3910, 23.2156]
-          },
-          properties: {
-            name: 'Habibganj Railway Station',
-            osm_id: 'bhopal_002',
-            highway: 'trunk'
-          }
-        },
-        {
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [77.4285, 23.2728]
-          },
-          properties: {
-            name: 'MP Nagar Bus Stop',
-            osm_id: 'bhopal_003',
-            highway: 'secondary'
-          }
-        },
-        {
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [77.4014, 23.2470]
-          },
-          properties: {
-            name: 'Bhopal Junction Railway Station',
-            osm_id: 'bhopal_004',
-            highway: 'primary'
-          }
-        },
-        {
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [77.4367, 23.2156]
-          },
-          properties: {
-            name: 'ISBT Bhopal',
-            osm_id: 'bhopal_005',
-            highway: 'trunk'
-          }
-        }
-      ]
-    };
+    return this.convertToGeoJSON(mockData.bus_stops.features);
   }
 }
 

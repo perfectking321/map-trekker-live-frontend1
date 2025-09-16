@@ -1,0 +1,560 @@
+HTTP 200 OK
+Allow: GET, HEAD, OPTIONS
+Content-Type: application/json
+Vary: Accept
+
+{
+    "bus_stops": {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "id": 1,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0416894 12.8270288)",
+                "properties": {
+                    "name": "SRM University",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 2,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1169355 12.9254158)",
+                "properties": {
+                    "name": "Tambaram Railway Station",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 3,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1403121 12.9426369)",
+                "properties": {
+                    "name": "Nehru nagar",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 4,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0369231 12.819855)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 5,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.03265 12.8145607)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 6,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0803767 12.8801203)",
+                "properties": {
+                    "name": "Otteri",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 7,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0803071 12.8801424)",
+                "properties": {
+                    "name": "Vandalur zoo",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 8,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1429158 12.9418993)",
+                "properties": {
+                    "name": "KumaranKundram",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 9,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1416469 12.9223538)",
+                "properties": {
+                    "name": "Camp Road",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 10,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1436734 12.9226099)",
+                "properties": {
+                    "name": "Camp Road",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 11,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1383932 12.9223457)",
+                "properties": {
+                    "name": "சேலையூர்",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 12,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1386033 12.9224877)",
+                "properties": {
+                    "name": "சேலையூர்",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 13,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1330579 12.9227845)",
+                "properties": {
+                    "name": "Convent Bus Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 14,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1311754 12.9228855)",
+                "properties": {
+                    "name": "Selayur",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 15,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1312269 12.9226722)",
+                "properties": {
+                    "name": "Christ King Covent",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 16,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1205736 12.9232126)",
+                "properties": {
+                    "name": "East Tambaram",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 17,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1206459 12.9234246)",
+                "properties": {
+                    "name": "East Tambaram",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 18,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0962763 12.9066371)",
+                "properties": {
+                    "name": "Perungalathur railway station",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 19,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0754114 12.8665865)",
+                "properties": {
+                    "name": "Urapakkam School",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 20,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0740504 12.8629155)",
+                "properties": {
+                    "name": "Tea Kadai",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 21,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0925211 12.9216339)",
+                "properties": {
+                    "name": "Bharathi Nagar Bus Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 22,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0897056 12.9209595)",
+                "properties": {
+                    "name": "Gandhi Nagar",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 23,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1276135 12.9266796)",
+                "properties": {
+                    "name": "Gandhi park bus stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 24,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1430852 12.8897333)",
+                "properties": {
+                    "name": "கஸ்பாபுரம்",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 25,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1452887 12.8885674)",
+                "properties": {
+                    "name": "பதுவஞ்சேரி",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 26,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1486323 12.8870239)",
+                "properties": {
+                    "name": "சடையப்பர் கோவில்",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 27,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1411752 12.8941183)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 28,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1420235 12.9022476)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 29,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1457925 12.9177987)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 30,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1043133 12.9256047)",
+                "properties": {
+                    "name": "Tambaram Kulam Bus stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 31,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.044392 12.8228618)",
+                "properties": {
+                    "name": "SRM Java Bus Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 32,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0423236 12.8230886)",
+                "properties": {
+                    "name": "University Building Bus Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 33,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0410429 12.8230145)",
+                "properties": {
+                    "name": "SRM Out Gate Bus Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 34,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0410444 12.823119)",
+                "properties": {
+                    "name": "SRM In Gate Bus Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 35,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0443001 12.8230727)",
+                "properties": {
+                    "name": "SRM Java Bus Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 36,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0410633 12.8209313)",
+                "properties": {
+                    "name": "SRM Hospital Bus Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 37,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0471994 12.8231176)",
+                "properties": {
+                    "name": "SRM Hospital Bus Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 38,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0412047 12.8207592)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 39,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0412151 12.8208137)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 40,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0384608 12.8220075)",
+                "properties": {
+                    "name": "SRM Potheri Station Stop",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 41,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1165783 12.9257591)",
+                "properties": {
+                    "name": "அரசு போக்குவரத்து கழகம் விழுப்புரம்,காஞ்சிபுரம் மண்டலம்,தாம்பரம் பேரூந்து நிலையம்",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 42,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0982247 12.9090099)",
+                "properties": {
+                    "name": "பீர்க்கன்கரணை",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 43,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1432713 12.9121191)",
+                "properties": {
+                    "name": "Indira Nagar",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 44,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1431219 12.912176)",
+                "properties": {
+                    "name": "Indira Nagar",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 45,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0556431 12.8398094)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 46,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1473638 12.9227028)",
+                "properties": {
+                    "name": "Mahalakshmi Nagar",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 47,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1206916 12.9293289)",
+                "properties": {
+                    "name": "Tambaram Railway Station",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 48,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1206329 12.9293586)",
+                "properties": {
+                    "name": "Tambaram Railway Station",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 49,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.1329593 12.9226395)",
+                "properties": {
+                    "name": "Aadhi Nagar",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 50,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0830781 12.9394356)",
+                "properties": {
+                    "name": "Varadharajapuram-Kishkinda",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 51,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0835877 12.9385909)",
+                "properties": {
+                    "name": "Varadharajapuram-Kishkinda",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 52,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0780255 12.9235972)",
+                "properties": {
+                    "name": "Varadharajapuram - Rayappa Nagar",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 53,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0773439 12.92398)",
+                "properties": {
+                    "name": "Varadharajapuram - Rayappa Nagar",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 54,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0749991 12.913686)",
+                "properties": {
+                    "name": "முடிச்சூர்",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 55,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0743228 12.9141132)",
+                "properties": {
+                    "name": "முடிச்சூர்",
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 56,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0709147 12.8967659)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 57,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0701581 12.8966938)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 58,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0711056 12.8921662)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 59,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0709524 12.8901925)",
+                "properties": {
+                    "name": null,
+                    "highway": "bus_stop"
+                }
+            },
+            {
+                "id": 60,
+                "type": "Feature",
+                "geometry": "SRID=4326;POINT (80.0755956 12.8680865)",
+                "properties": {
+                    "name": "Urapakkam school stop",
+                    "highway": "bus_stop"
+                }
+            }
+        ]
+    },
+    "crossings": {
+        "type": "FeatureCollection",
+        "features": []
+    },
+    "traffic_signals": {
+        "type": "FeatureCollection",
+        "features": []
+    }
+}
