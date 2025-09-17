@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import BusMap from '@/components/Map/BusMap';
-import { BusStopsGeoJSON } from '@/services/api';
+import BusMap, { BusRoutePath } from '@/components/Map/BusMap';
+import ApiService, { BusStopsGeoJSON } from '@/services/api';
+import { LiveBus } from '@/types/bus';
 import { 
   ArrowLeft, 
   Shield, 
@@ -19,179 +18,121 @@ import {
   Users,
   Clock,
   TrendingUp,
-  MapPin
+  MapPin,
+  LogOut
 } from 'lucide-react';
 
-interface FleetBus {
-  id: string;
-  route: string;
-  driver: string;
-  status: 'active' | 'idle' | 'delayed' | 'maintenance';
-  location: [number, number];
-  crowdLevel: 'low' | 'medium' | 'high';
-  lastUpdate: string;
-}
+import { getAuth, signOut, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, onSnapshot } from "firebase/firestore";
+import { app } from '@/firebase';
 
 const AdminInterface = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [fleetData, setFleetData] = useState<FleetBus[]>([]);
-  const [selectedBus, setSelectedBus] = useState<FleetBus | null>(null);
-  
-  // Login form state
-  const [loginData, setLoginData] = useState({
-    adminId: '',
-    password: ''
-  });
+  const [adminId, setAdminId] = useState<string | null>(null);
+  const [busStops, setBusStops] = useState<BusStopsGeoJSON>({ type: 'FeatureCollection', features: [] });
+  const [busRoutes, setBusRoutes] = useState<BusRoutePath[]>([]);
+  const [liveBuses, setLiveBuses] = useState<LiveBus[]>([]);
+  const [selectedBus, setSelectedBus] = useState<LiveBus | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Mock bus stops data
-  const [busStops] = useState<BusStopsGeoJSON>({
-    type: 'FeatureCollection',
-    features: [
-      {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [77.5946, 12.9716] },
-        properties: { name: 'MG Road Bus Stop', osm_id: 'mock_001', highway: 'primary' }
-      },
-      {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [77.6412, 12.9279] },
-        properties: { name: 'Koramangala Bus Terminal', osm_id: 'mock_002', highway: 'secondary' }
-      },
-      {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [77.5773, 12.9698] },
-        properties: { name: 'Brigade Road Junction', osm_id: 'mock_003', highway: 'primary' }
-      }
-    ]
-  });
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
+  // Check auth state and set adminId
   useEffect(() => {
-    if (isLoggedIn) {
-      // Mock fleet data
-      setFleetData([
-        {
-          id: 'BUS001',
-          route: 'Route 42A',
-          driver: 'John Smith',
-          status: 'active',
-          location: [12.9716, 77.5946],
-          crowdLevel: 'medium',
-          lastUpdate: '2 min ago'
-        },
-        {
-          id: 'BUS002',
-          route: 'Route 15B',
-          driver: 'Sarah Johnson',
-          status: 'delayed',
-          location: [12.9279, 77.6412],
-          crowdLevel: 'high',
-          lastUpdate: '1 min ago'
-        },
-        {
-          id: 'BUS003',
-          route: 'Route 42A',
-          driver: 'Mike Wilson',
-          status: 'idle',
-          location: [12.9698, 77.5773],
-          crowdLevel: 'low',
-          lastUpdate: '5 min ago'
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // For MVP, we assume any authenticated user reaching here via /admin is an admin
+        setAdminId(user.uid);
+      } else {
+        setAdminId(null);
+        navigate('/auth/admin'); // Redirect to auth if not logged in as admin
+      }
+    });
+    return () => unsubscribe();
+  }, [auth, navigate]);
+
+  // Fetch Bus Stops and Routes from API Service
+  useEffect(() => {
+    const loadMapData = async () => {
+      try {
+        setLoading(true);
+        const [stops, routes] = await Promise.all([
+          ApiService.getBusStops(),
+          ApiService.getBusRoutes(),
+        ]);
+        setBusStops(stops);
+        setBusRoutes(routes);
+      } catch (error) {
+        console.error("Error loading map data:", error);
+        toast({ title: "Error Loading Map Data", description: "Could not fetch bus stop or route data.", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (adminId) {
+      loadMapData();
+    }
+  }, [adminId, toast]);
+
+  // Real-time Bus Locations from Firestore
+  useEffect(() => {
+    if (!adminId) return;
+
+    const busLocationsRef = collection(db, "busLocations");
+    const unsubscribe = onSnapshot(busLocationsRef, (snapshot) => {
+      const buses: LiveBus[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.isSharingLocation && data.latitude !== null && data.longitude !== null) {
+          buses.push({
+            id: doc.id,
+            location: [data.longitude, data.latitude], 
+            routeId: data.routeId || `ROUTE-${doc.id.slice(0, 3).toUpperCase()}`,
+            crowdLevel: data.crowdLevel || 'low',
+            nextStopIndex: data.nextStopIndex || 0, 
+            speed: data.speed || 0, 
+          });
         }
-      ]);
-    }
-  }, [isLoggedIn]);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Connect to Django backend admin authentication
-    setIsLoggedIn(true);
-    toast({
-      title: "Admin Login Successful",
-      description: "Welcome to the admin dashboard!",
+      });
+      setLiveBuses(buses);
+    }, (error) => {
+      console.error("Error fetching real-time bus locations:", error);
+      toast({
+        title: "Real-time Data Error",
+        description: "Could not fetch live bus locations.",
+        variant: "destructive",
+      });
     });
-  };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setFleetData([]);
-    setSelectedBus(null);
-    toast({
-      title: "Logged Out",
-      description: "Admin session ended.",
-    });
-  };
+    return () => unsubscribe();
+  }, [adminId, db, toast]);
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'active': return 'default';
-      case 'delayed': return 'destructive';
-      case 'idle': return 'secondary';
-      case 'maintenance': return 'outline';
-      default: return 'secondary';
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Logged Out", description: "Admin session ended." });
+      navigate('/'); // Redirect to home after logout
+    } catch (error: any) {
+      toast({
+        title: "Error logging out",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
-  const getCrowdBadgeVariant = (level: string) => {
-    switch (level) {
-      case 'low': return 'default';
-      case 'medium': return 'secondary';
-      case 'high': return 'destructive';
-      default: return 'secondary';
-    }
+  const getCrowdLevelBadge = (level: 'low' | 'medium' | 'high') => {
+    const styles = { low: 'bg-blue-500 text-white', medium: 'bg-yellow-500 text-black', high: 'bg-red-500 text-white' };
+    return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[level]}`}>{level.charAt(0).toUpperCase() + level.slice(1)}</span>;
   };
 
-  if (!isLoggedIn) {
+  if (!adminId || loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/')}
-              className="absolute top-4 left-4"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <CardTitle className="text-2xl flex items-center justify-center gap-2">
-              <Shield className="h-6 w-6" />
-              Admin Login
-            </CardTitle>
-            <CardDescription>
-              Access the fleet management dashboard
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="adminId">Admin ID</Label>
-                <Input
-                  id="adminId"
-                  type="text"
-                  placeholder="Enter your admin ID"
-                  value={loginData.adminId}
-                  onChange={(e) => setLoginData({...loginData, adminId: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData({...loginData, password: e.target.value})}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Access Dashboard
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <p>{adminId ? "Loading Admin Dashboard..." : "Redirecting to login..."}</p>
       </div>
     );
   }
@@ -215,6 +156,7 @@ const AdminInterface = () => {
             </h1>
           </div>
           <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
             Logout
           </Button>
         </div>
@@ -241,7 +183,7 @@ const AdminInterface = () => {
                     <CardDescription>Real-time bus monitoring</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {fleetData.map((bus) => (
+                    {liveBuses.length > 0 ? liveBuses.map((bus) => (
                       <div 
                         key={bus.id} 
                         className={`p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -252,27 +194,20 @@ const AdminInterface = () => {
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <p className="font-medium text-sm">{bus.id}</p>
-                            <p className="text-xs text-muted-foreground">{bus.route}</p>
+                            <p className="text-xs text-muted-foreground">{bus.routeId}</p>
                           </div>
-                          <Badge variant={getStatusBadgeVariant(bus.status)} className="text-xs">
-                            {bus.status}
-                          </Badge>
+                          {getCrowdLevelBadge(bus.crowdLevel)}
                         </div>
                         <div className="space-y-1">
                           <div className="flex justify-between items-center">
-                            <span className="text-xs text-muted-foreground">Driver:</span>
-                            <span className="text-xs">{bus.driver}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-muted-foreground">Crowd:</span>
-                            <Badge variant={getCrowdBadgeVariant(bus.crowdLevel)} className="text-xs">
-                              {bus.crowdLevel}
+                            <span className="text-xs text-muted-foreground">Status:</span>
+                            <Badge variant={bus.location ? 'default' : 'secondary'} className="text-xs">
+                              {bus.location ? 'Active' : 'Offline'}
                             </Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground">{bus.lastUpdate}</p>
                         </div>
                       </div>
-                    ))}
+                    )) : <p className="text-sm text-muted-foreground">No active buses found.</p>}
                   </CardContent>
                 </Card>
 
@@ -287,16 +222,16 @@ const AdminInterface = () => {
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Route:</span>
-                            <span>{selectedBus.route}</span>
+                            <span>{selectedBus.routeId}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Driver:</span>
-                            <span>{selectedBus.driver}</span>
+                            <span className="text-muted-foreground">Crowd:</span>
+                            {getCrowdLevelBadge(selectedBus.crowdLevel)}
                           </div>
-                          <div className="flex justify-between">
+                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Status:</span>
-                            <Badge variant={getStatusBadgeVariant(selectedBus.status)}>
-                              {selectedBus.status}
+                            <Badge variant={selectedBus.location ? 'default' : 'secondary'}>
+                              {selectedBus.location ? 'Active' : 'Offline'}
                             </Badge>
                           </div>
                         </div>
@@ -310,27 +245,25 @@ const AdminInterface = () => {
               <div className="lg:col-span-3 relative">
                 <BusMap
                   busStops={busStops}
-                  center={[12.9716, 77.5946]}
-                  zoom={13}
+                  liveBuses={liveBuses}
+                  userLocation={null}
+                  busRoutes={busRoutes}
+                  // Admin map doesn't need onBusStopSelect
                 />
                 
-                <div className="absolute top-4 left-4 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-lg">
+                <div className="absolute top-4 left-4 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-lg z-[1000]">
                   <div className="flex items-center gap-2 mb-2">
                     <Bus className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium">Fleet Overview</span>
                   </div>
                   <div className="space-y-1 text-xs">
                     <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Active:</span>
-                      <span className="text-success">{fleetData.filter(b => b.status === 'active').length}</span>
+                      <span className="text-muted-foreground">Active Buses:</span>
+                      <span className="text-success">{liveBuses.length}</span>
                     </div>
                     <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Delayed:</span>
-                      <span className="text-destructive">{fleetData.filter(b => b.status === 'delayed').length}</span>
-                    </div>
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground">Idle:</span>
-                      <span className="text-muted-foreground">{fleetData.filter(b => b.status === 'idle').length}</span>
+                      <span className="text-muted-foreground">Total Routes:</span>
+                      <span className="text-foreground">{busRoutes.length}</span>
                     </div>
                   </div>
                 </div>
@@ -338,234 +271,49 @@ const AdminInterface = () => {
             </div>
           </TabsContent>
 
-          {/* Route Optimization */}
+          {/* Route Optimization (Placeholder)*/}
           <TabsContent value="routes" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <RouteIcon className="h-5 w-5" />
-                    Route Analysis
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="p-3 border border-border rounded-lg">
-                      <h4 className="font-medium mb-2">Route 42A</h4>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Efficiency:</span>
-                          <span className="text-success">87%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Avg Delay:</span>
-                          <span className="text-warning">5 min</span>
-                        </div>
-                      </div>
-                    </div>
-                    <Button className="w-full" variant="outline">
-                      Optimize Route
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Performance Metrics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">On-time Performance</span>
-                      <span className="text-sm font-medium">82%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Fleet Utilization</span>
-                      <span className="text-sm font-medium">91%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Fuel Efficiency</span>
-                      <span className="text-sm font-medium">6.2 km/l</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Passenger Insights
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Peak Hours</span>
-                      <span className="text-sm font-medium">8-10 AM</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Busiest Route</span>
-                      <span className="text-sm font-medium">Route 42A</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Avg Occupancy</span>
-                      <span className="text-sm font-medium">68%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RouteIcon className="h-5 w-5" />
+                  Route Optimization (Coming Soon)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Advanced route optimization features will be implemented here.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          {/* Predictive Alerts */}
+          {/* Predictive Alerts (Placeholder)*/}
           <TabsContent value="alerts" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5" />
-                    Active Alerts
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="p-3 border-l-4 border-l-destructive bg-destructive/5 rounded">
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-medium text-sm">Route 15B Delay</h4>
-                      <Badge variant="destructive" className="text-xs">High</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Predicted 15-minute delay due to traffic congestion</p>
-                    <p className="text-xs text-muted-foreground mt-1">ETA: 2 min ago</p>
-                  </div>
-                  
-                  <div className="p-3 border-l-4 border-l-warning bg-warning/5 rounded">
-                    <div className="flex justify-between items-start mb-1">
-                      <h4 className="font-medium text-sm">Maintenance Required</h4>
-                      <Badge variant="secondary" className="text-xs">Medium</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground">BUS003 scheduled for maintenance in 2 days</p>
-                    <p className="text-xs text-muted-foreground mt-1">Due: Dec 15</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    Delay Predictions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Route 42A</span>
-                      <Badge variant="default" className="text-xs">On Time</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Route 15B</span>
-                      <Badge variant="destructive" className="text-xs">+12 min</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Route 7C</span>
-                      <Badge variant="secondary" className="text-xs">+3 min</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  Predictive Alerts (Coming Soon)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">AI-driven predictive delay and diversion alerts will be displayed here.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          {/* Data Insights */}
+          {/* Data Insights (Placeholder)*/}
           <TabsContent value="insights" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <BarChart3 className="h-5 w-5" />
-                    Daily Stats
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Passengers Today</span>
-                    <span className="text-sm font-medium">2,847</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Revenue</span>
-                    <span className="text-sm font-medium">₹14,235</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Trips Completed</span>
-                    <span className="text-sm font-medium">156</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Peak Performance</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Best Route</span>
-                    <span className="text-sm font-medium">Route 42A</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Best Driver</span>
-                    <span className="text-sm font-medium">John Smith</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Efficiency</span>
-                    <span className="text-sm font-medium">94%</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">System Health</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Active Buses</span>
-                    <span className="text-sm font-medium text-success">12/15</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">System Uptime</span>
-                    <span className="text-sm font-medium text-success">99.8%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Data Quality</span>
-                    <span className="text-sm font-medium text-success">98.5%</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Alerts Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Critical</span>
-                    <span className="text-sm font-medium text-destructive">1</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Warnings</span>
-                    <span className="text-sm font-medium text-warning">3</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Resolved</span>
-                    <span className="text-sm font-medium text-success">24</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Data Insights (Coming Soon)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Detailed data insights and analytics will be available here.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
