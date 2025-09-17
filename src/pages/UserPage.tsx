@@ -1,133 +1,154 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import BusMap from '@/components/Map/BusMap';
 import ApiService, { BusStopsGeoJSON } from '@/services/api';
-import { getLiveBuses } from '@/services/busSimulation';
+// import { getLiveBuses } from '@/services/busSimulation'; // We will replace this with Firestore
 import { LiveBus } from '@/types/bus';
-import { ArrowLeft, Bell, LogOut } from 'lucide-react';
+import { Bell, LogOut } from 'lucide-react';
+
+import { getAuth, signOut, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, onSnapshot } from "firebase/firestore";
+import { app } from '@/firebase';
 
 const UserPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // --- Auth State ---
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoginView, setIsLoginView] = useState(true);
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [registerData, setRegisterData] = useState({ email: '', password: '' });
-
-  // --- App State ---
+  const [userId, setUserId] = useState<string | null>(null);
   const [busStops, setBusStops] = useState<BusStopsGeoJSON>({ type: 'FeatureCollection', features: [] });
   const [liveBuses, setLiveBuses] = useState<LiveBus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Check auth state and set userId
   useEffect(() => {
-    if (!isLoggedIn) return; // Don't load data if not logged in
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        setUserId(user.uid);
+      } else {
+        setIsLoggedIn(false);
+        setUserId(null);
+        navigate('/auth/user'); // Redirect to auth if not logged in
+      }
+    });
+    return () => unsubscribe();
+  }, [auth, navigate]);
 
-    const loadData = async () => {
+  // Fetch User Location
+  useEffect(() => {
+    if (isLoggedIn) {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setUserLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            });
+          },
+          (error) => {
+            console.error("Error getting user location:", error);
+            toast({
+              title: "Geolocation Error",
+              description: "Could not retrieve your location. Map features may be limited.",
+              variant: "destructive",
+            });
+          },
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+        );
+      }
+    }
+  }, [isLoggedIn, toast]);
+
+
+  // Fetch Bus Stops from API Service (or later, Firestore)
+  useEffect(() => {
+    const loadBusStops = async () => {
       try {
         setLoading(true);
         const stops = await ApiService.getBusStops();
         setBusStops(stops);
       } catch (error) {
-        toast({ title: "Error Loading Data", variant: "destructive" });
+        console.error("Error loading bus stops:", error);
+        toast({ title: "Error Loading Bus Stops", description: "Could not fetch bus stop data.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
-    loadData();
 
-    const busInterval = setInterval(() => {
-      setLiveBuses(getLiveBuses());
-    }, 2000);
-
-    return () => clearInterval(busInterval);
+    if (isLoggedIn) {
+      loadBusStops();
+    }
   }, [isLoggedIn, toast]);
 
-  // --- Auth Handlers ---
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loginData.email && loginData.password) {
-      setIsLoggedIn(true);
-      toast({ title: "Login Successful", description: "Welcome! You can now track buses." });
-    }
-  };
+  // Real-time Bus Locations from Firestore
+  useEffect(() => {
+    if (!isLoggedIn) return;
 
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (registerData.email && registerData.password) {
-      setIsLoggedIn(true);
-      toast({ title: "Registration Successful", description: "Welcome! You can now track buses." });
-    }
-  };
+    const busLocationsRef = collection(db, "busLocations");
+    const unsubscribe = onSnapshot(busLocationsRef, (snapshot) => {
+      const buses: LiveBus[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.isSharingLocation && data.latitude !== null && data.longitude !== null) {
+          buses.push({
+            id: doc.id,
+            location: [data.longitude, data.latitude], // Corrected to [longitude, latitude]
+            routeId: data.routeId || `ROUTE-${doc.id.slice(0, 3).toUpperCase()}`,
+            crowdLevel: data.crowdLevel || 'low',
+            nextStopIndex: data.nextStopIndex || 0, // Assuming a default or retrieving from data
+            speed: data.speed || 0, // Assuming a default or retrieving from data
+          });
+        }
+      });
+      setLiveBuses(buses);
+    }, (error) => {
+      console.error("Error fetching real-time bus locations:", error);
+      toast({
+        title: "Real-time Data Error",
+        description: "Could not fetch live bus locations.",
+        variant: "destructive",
+      });
+    });
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    toast({ title: "Logged Out", description: "You have successfully logged out." });
+    return () => unsubscribe();
+  }, [isLoggedIn, db, toast]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Logged Out", description: "You have successfully logged out." });
+      navigate('/'); // Redirect to home or auth page after logout
+    } catch (error: any) {
+      toast({
+        title: "Error logging out",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const getCrowdLevelBadge = (level: 'low' | 'medium' | 'high') => {
     const styles = { low: 'bg-blue-500 text-white', medium: 'bg-yellow-500 text-black', high: 'bg-red-500 text-white' };
-    return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[level]}`}>{level}</span>;
+    return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[level]}`}>{level.charAt(0).toUpperCase() + level.slice(1)}</span>;
   };
 
-  // --- Render Login/Registration Page ---
-  if (!isLoggedIn) {
+  if (!isLoggedIn || loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-         <div className="absolute top-4 left-4">
-          <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </div>
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>{isLoginView ? 'User Login' : 'User Registration'}</CardTitle>
-            <CardDescription>{isLoginView ? 'Enter your credentials to track buses.' : 'Create an account to get started.'}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoginView ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" placeholder="user@example.com" value={loginData.email} onChange={e => setLoginData({...loginData, email: e.target.value})} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input id="login-password" type="password" placeholder="********" value={loginData.password} onChange={e => setLoginData({...loginData, password: e.target.value})} required />
-                </div>
-                <Button type="submit" className="w-full">Login</Button>
-              </form>
-            ) : (
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reg-email">Email</Label>
-                  <Input id="reg-email" type="email" placeholder="user@example.com" value={registerData.email} onChange={e => setRegisterData({...registerData, email: e.target.value})} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-password">Password</Label>
-                  <Input id="reg-password" type="password" placeholder="********" value={registerData.password} onChange={e => setRegisterData({...registerData, password: e.target.value})} required />
-                </div>
-                <Button type="submit" className="w-full">Register</Button>
-              </form>
-            )}
-            <Button variant="link" className="mt-4 w-full" onClick={() => setIsLoginView(!isLoginView)}>
-              {isLoginView ? 'Don\'t have an account? Register' : 'Already have an account? Login'}
-            </Button>
-          </CardContent>
-        </Card>
+        <p>{isLoggedIn ? "Loading Map..." : "Redirecting to login..."}</p>
       </div>
     );
   }
 
-  // --- Render User Dashboard ---
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground">
       <header className="flex items-center justify-between p-4 border-b border-border shadow-sm">
@@ -153,16 +174,17 @@ const UserPage = () => {
                 {liveBuses.length > 0 ? liveBuses.map(bus => (
                   <div key={bus.id} className="p-3 bg-muted rounded-lg">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold">Route {bus.routeId.split('-')[1]}</span>
+                      <span className="font-bold">{bus.routeId}</span>
                       {getCrowdLevelBadge(bus.crowdLevel)}
                     </div>
-                    <p className="text-sm text-muted-foreground">{bus.id}</p>
+                    <p className="text-sm text-muted-foreground">Bus ID: {bus.id}</p>
                     <div className="flex justify-between text-sm mt-2">
-                      <span>0.8 km away</span>
-                      <span>5 min ETA</span>
+                      {/* These will be dynamically calculated later */}
+                      <span>Distance: --</span>
+                      <span>ETA: --</span>
                     </div>
                   </div>
-                )) : <p className="text-sm text-muted-foreground">No nearby buses found.</p>}
+                )) : <p className="text-sm text-muted-foreground">No nearby buses found or sharing location.</p>}
               </div>
             </CardContent>
           </Card>
@@ -183,7 +205,10 @@ const UserPage = () => {
               <p>Loading Map...</p>
             </div>
           ) : (
-            <BusMap busStops={busStops} />
+            <BusMap 
+              busStops={busStops} 
+              // Removed liveBuses and userLocation props as BusMap manages these internally
+            />
           )}
         </main>
       </div>
