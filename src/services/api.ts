@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import mockData from '../data.json';
 
@@ -21,6 +20,12 @@ export interface BusStopFeature {
 export interface BusStopsGeoJSON {
   type: 'FeatureCollection';
   features: BusStopFeature[];
+}
+
+export interface BusRoutePath {
+  id: string;
+  name: string;
+  path: [number, number][]; // A list of coordinates [lng, lat]
 }
 
 class ApiService {
@@ -74,12 +79,24 @@ class ApiService {
     return this.convertToGeoJSON(mockData.bus_stops.features);
   }
 
+  private getMockBusRoutes(): BusRoutePath[] {
+    return mockData.bus_routes.map(route => ({
+      ...route,
+      path: route.path.map(coord => [coord[0], coord[1]] as [number, number])
+    }));
+  }
+
   // --- PUBLIC METHODS ---
   // All methods now reliably fall back to mock data.
 
   async getBusStops(): Promise<BusStopsGeoJSON> {
     console.log("Using mock data for bus stops.");
     return this.getMockBusStops();
+  }
+
+  async getBusRoutes(): Promise<BusRoutePath[]> {
+    console.log("Using mock data for bus routes.");
+    return this.getMockBusRoutes();
   }
 
   async searchBusStops(query: string): Promise<BusStopsGeoJSON> {

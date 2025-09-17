@@ -1,18 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import BusMap from '@/components/Map/BusMap';
-import ApiService, { BusStopsGeoJSON } from '@/services/api';
-// import { getLiveBuses } from '@/services/busSimulation'; // We will replace this with Firestore
+import BusMap from '@/components/Map/BusMap'; // Removed BusRoutePath import from BusMap
+import ApiService, { BusStopsGeoJSON, BusStopFeature, BusRoutePath } from '@/services/api'; // BusRoutePath now imported from ApiService
 import { LiveBus } from '@/types/bus';
-import { Bell, LogOut } from 'lucide-react';
+import { Bell, LogOut, Bus as BusIcon } from 'lucide-react'; // Walking is now directly imported
 
 import { getAuth, signOut, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, onSnapshot } from "firebase/firestore";
 import { app } from '@/firebase';
+
+import * as geolib from 'geolib';
+
+// Import Leaflet and Leaflet Routing Machine
+import L from 'leaflet';
+import 'leaflet-routing-machine';
 
 const UserPage = () => {
   const navigate = useNavigate();
@@ -21,12 +26,16 @@ const UserPage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [busStops, setBusStops] = useState<BusStopsGeoJSON>({ type: 'FeatureCollection', features: [] });
+  const [busRoutes, setBusRoutes] = useState<BusRoutePath[]>([]);
   const [liveBuses, setLiveBuses] = useState<LiveBus[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedBusStop, setSelectedBusStop] = useState<BusStopFeature | null>(null);
+  const [walkingRouteInfo, setWalkingRouteInfo] = useState<{ distance: string; time: string } | null>(null);
 
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const routingControlRef = useRef<L.Routing.Control | null>(null);
 
   // Check auth state and set userId
   useEffect(() => {
@@ -47,7 +56,7 @@ const UserPage = () => {
   useEffect(() => {
     if (isLoggedIn) {
       if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
+        const watchId = navigator.geolocation.watchPosition(
           (position) => {
             setUserLocation({
               lat: position.coords.latitude,
@@ -64,28 +73,32 @@ const UserPage = () => {
           },
           { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
         );
+        return () => navigator.geolocation.clearWatch(watchId);
       }
     }
   }, [isLoggedIn, toast]);
 
-
-  // Fetch Bus Stops from API Service (or later, Firestore)
+  // Fetch Bus Stops and Routes from API Service
   useEffect(() => {
-    const loadBusStops = async () => {
+    const loadMapData = async () => {
       try {
         setLoading(true);
-        const stops = await ApiService.getBusStops();
+        const [stops, routes] = await Promise.all([
+          ApiService.getBusStops(),
+          ApiService.getBusRoutes(),
+        ]);
         setBusStops(stops);
+        setBusRoutes(routes);
       } catch (error) {
-        console.error("Error loading bus stops:", error);
-        toast({ title: "Error Loading Bus Stops", description: "Could not fetch bus stop data.", variant: "destructive" });
+        console.error("Error loading map data:", error);
+        toast({ title: "Error Loading Map Data", description: "Could not fetch bus stop or route data.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
 
     if (isLoggedIn) {
-      loadBusStops();
+      loadMapData();
     }
   }, [isLoggedIn, toast]);
 
@@ -101,11 +114,11 @@ const UserPage = () => {
         if (data.isSharingLocation && data.latitude !== null && data.longitude !== null) {
           buses.push({
             id: doc.id,
-            location: [data.longitude, data.latitude], // Corrected to [longitude, latitude]
+            location: [data.longitude, data.latitude], 
             routeId: data.routeId || `ROUTE-${doc.id.slice(0, 3).toUpperCase()}`,
             crowdLevel: data.crowdLevel || 'low',
-            nextStopIndex: data.nextStopIndex || 0, // Assuming a default or retrieving from data
-            speed: data.speed || 0, // Assuming a default or retrieving from data
+            nextStopIndex: data.nextStopIndex || 0, 
+            speed: data.speed || 0, 
           });
         }
       });
@@ -121,6 +134,61 @@ const UserPage = () => {
 
     return () => unsubscribe();
   }, [isLoggedIn, db, toast]);
+
+  // Handle bus stop selection for walking route
+  const handleBusStopSelect = (busStop: BusStopFeature) => {
+    setSelectedBusStop(busStop);
+    setWalkingRouteInfo(null); // Clear previous info
+
+    if (userLocation && busStop.geometry.type === 'Point') {
+      const busStopCoords = { latitude: busStop.geometry.coordinates[1], longitude: busStop.geometry.coordinates[0] };
+      const userCoords = { latitude: userLocation.lat, longitude: userLocation.lng };
+
+      // Display walking route on map
+      if (routingControlRef.current) {
+        routingControlRef.current.setWaypoints([
+          L.latLng(userCoords.latitude, userCoords.longitude),
+          L.latLng(busStopCoords.latitude, busStopCoords.longitude)
+        ]);
+        routingControlRef.current.route();
+
+        routingControlRef.current.on('routesfound', (e) => {
+          const route = e.routes[0];
+          if (route) {
+            const distanceKm = route.summary.totalDistance / 1000;
+            const timeMinutes = route.summary.totalTime / 60;
+            setWalkingRouteInfo({
+              distance: `${distanceKm.toFixed(2)} km`,
+              time: `${Math.round(timeMinutes)} min`,
+            });
+          }
+        });
+      }
+    } else if (!userLocation) {
+      toast({ title: "Location Needed", description: "Please enable location services to calculate walking routes.", variant: "info" });
+    }
+  };
+
+  // Calculate ETA for buses to their next stop
+  const getBusEtaToNextStop = (bus: LiveBus) => {
+    const route = busRoutes.find(r => r.id === bus.routeId);
+    if (!route || bus.nextStopIndex >= route.path.length) return "N/A";
+
+    const nextStopCoords = route.path[bus.nextStopIndex]; // [lng, lat]
+    const busLocation = { latitude: bus.location[1], longitude: bus.location[0] };
+    const stopLocation = { latitude: nextStopCoords[1], longitude: nextStopCoords[0] };
+
+    // Simple straight-line distance for MVP
+    const distanceMeters = geolib.getDistance(busLocation, stopLocation);
+    // Assuming an average bus speed for ETA (e.g., 20 km/h = 5.56 m/s)
+    const averageBusSpeed_mps = 20 * 1000 / 3600; 
+    if (averageBusSpeed_mps === 0) return "N/A";
+    
+    const timeSeconds = distanceMeters / averageBusSpeed_mps;
+    const timeMinutes = Math.round(timeSeconds / 60);
+
+    return `${timeMinutes} min`;
+  };
 
   const handleLogout = async () => {
     try {
@@ -174,20 +242,45 @@ const UserPage = () => {
                 {liveBuses.length > 0 ? liveBuses.map(bus => (
                   <div key={bus.id} className="p-3 bg-muted rounded-lg">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold">{bus.routeId}</span>
+                      <span className="font-bold flex items-center gap-2"><BusIcon className="h-4 w-4" /> {bus.routeId}</span>
                       {getCrowdLevelBadge(bus.crowdLevel)}
                     </div>
                     <p className="text-sm text-muted-foreground">Bus ID: {bus.id}</p>
                     <div className="flex justify-between text-sm mt-2">
-                      {/* These will be dynamically calculated later */}
-                      <span>Distance: --</span>
-                      <span>ETA: --</span>
+                      <span>ETA to next stop: {getBusEtaToNextStop(bus)}</span>
                     </div>
                   </div>
                 )) : <p className="text-sm text-muted-foreground">No nearby buses found or sharing location.</p>}
               </div>
             </CardContent>
           </Card>
+
+          {selectedBusStop && userLocation && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Walking className="text-primary" /> Walking to {selectedBusStop.properties.name}</CardTitle>
+                <CardDescription>Route from your location to the selected bus stop.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {walkingRouteInfo ? (
+                  <div className="space-y-2">
+                    <p className="text-sm">Distance: <span className="font-medium">{walkingRouteInfo.distance}</span></p>
+                    <p className="text-sm">Estimated Time: <span className="font-medium">{walkingRouteInfo.time}</span></p>
+                    <Button variant="outline" className="w-full mt-2" onClick={() => {
+                      setSelectedBusStop(null);
+                      setWalkingRouteInfo(null);
+                      if (routingControlRef.current) {
+                        routingControlRef.current.setWaypoints([]); // Clear route
+                      }
+                    }}>Clear Route</Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Calculating route...</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardContent className="pt-6">
               <h2 className="text-lg font-semibold mb-2">Arrival Alerts</h2>
@@ -207,7 +300,10 @@ const UserPage = () => {
           ) : (
             <BusMap 
               busStops={busStops} 
-              // Removed liveBuses and userLocation props as BusMap manages these internally
+              liveBuses={liveBuses}
+              userLocation={userLocation}
+              busRoutes={busRoutes}
+              onBusStopSelect={handleBusStopSelect}
             />
           )}
         </main>

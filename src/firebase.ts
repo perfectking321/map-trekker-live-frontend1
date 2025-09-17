@@ -2,8 +2,10 @@
 // Please paste your firebaseConfig object here once you have it.
 
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyA4r-lwKDdnCQ7gsLZUIpRk6tk2IjUDWM8",
     authDomain: "fir-api-ba32e.firebaseapp.com",
@@ -15,5 +17,7 @@ const firebaseConfig = {
     measurementId: "G-020XB6K5EW"
   };
 
+// Initialize Firebase
 export const app = initializeApp(firebaseConfig);
-export const analytics = getAnalytics(app);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
