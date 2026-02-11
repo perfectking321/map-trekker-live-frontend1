@@ -1,7 +1,10 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "map-trekker-live",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Real-time bus tracking system with live location updates, ETA predictions, and crowd density monitoring",
+  "author": "Your Name",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
