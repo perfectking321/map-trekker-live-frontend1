@@ -18,8 +18,8 @@ Pretty simple but effective. Still a work in progress!
 
 1. **Clone the repo**:
    ```bash
-   git clone https://github.com/yourusername/map-trekker-live-frontend1.git
-   cd map-trekker-live-frontend1
+   git clone https://github.com/perfectking321/Marauder-Map-AI-Real-time-Bus-Tracking-System.git
+   cd Marauder-Map-AI-Real-time-Bus-Tracking-System
    ```
 
 2. **Install dependencies**:
@@ -40,7 +40,7 @@ Pretty simple but effective. Still a work in progress!
    cp .env.example .env
    ```
    Edit `.env` with your Firebase credentials:
-   ```
+   ```env
    VITE_FIREBASE_API_KEY=your_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
    VITE_FIREBASE_PROJECT_ID=your_project_id
