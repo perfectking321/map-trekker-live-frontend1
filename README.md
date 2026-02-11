@@ -79,13 +79,13 @@ Also, it was a fun way to learn Firebase real-time features and map integrations
 
 ## 💡 Contributing
 
-Got ideas or want to make this better? Fork it, open an issue, or submit a pull request! Check out [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Got ideas or want to make this better? Fork it, open an issue, or submit a pull request! Check out [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 This is a learning project, so all contributions and feedback are welcome.
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](docs/LICENSE) for details.
 
 ## 🙏 Credits
 
@@ -94,4 +94,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
+**Want to contribute?** See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) and [docs/CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md)
+
 **Need detailed setup help?** Check [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+
+**Version history:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
