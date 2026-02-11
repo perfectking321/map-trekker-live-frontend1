@@ -195,10 +195,11 @@ const UserPage = () => {
       await signOut(auth);
       toast({ title: "Logged Out", description: "You have successfully logged out." });
       navigate('/'); // Redirect to home or auth page after logout
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         title: "Error logging out",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }

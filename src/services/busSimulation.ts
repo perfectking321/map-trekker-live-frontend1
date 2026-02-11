@@ -6,7 +6,11 @@ const activeBuses = new Map<string, LiveBus>();
 const busRoutes: BusRoute[] = [];
 let simulationInterval: NodeJS.Timeout | null = null;
 
-const allBusStops: BusStop[] = rawBusStops.bus_stops.features.map((feature: any) => {
+const allBusStops: BusStop[] = rawBusStops.bus_stops.features.map((feature: {
+  id: number | string;
+  geometry: string;
+  properties: { name?: string };
+}) => {
   const [lng, lat] = feature.geometry.replace('SRID=4326;POINT (', '').replace(')', '').split(' ').map(Number);
   return {
     id: feature.id.toString(),
