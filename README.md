@@ -99,3 +99,4 @@ MIT License - see [LICENSE](docs/LICENSE) for details.
 **Need detailed setup help?** Check [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 **Version history:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
+
