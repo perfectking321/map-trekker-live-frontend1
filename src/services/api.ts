@@ -5,7 +5,6 @@ export interface BusStopProperties {
   name: string;
   osm_id: string;
   highway?: string;
-  [key: string]: any;
 }
 
 export interface BusStopFeature {
@@ -43,7 +42,11 @@ class ApiService {
   }
 
   // Helper to convert raw data (from JSON file) to GeoJSON
-  private convertToGeoJSON(data: any[]): BusStopsGeoJSON {
+  private convertToGeoJSON(data: Array<{
+    id: number | string;
+    geometry: string;
+    properties: { name?: string; highway?: string };
+  }>): BusStopsGeoJSON {
     const features: BusStopFeature[] = data.map((item) => {
       let coordinates: [number, number] = [0, 0];
       // The geometry string from the JSON is in WKT format

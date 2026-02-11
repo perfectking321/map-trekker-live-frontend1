@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { BusRoute } from '@/types/bus';
 import { getAvailableRoutes, startBusSimulation, stopBusSimulation, updateCrowdLevel } from '@/services/busSimulation';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface DriverInterfaceProps {
   // Props, if any, will be added here
 }

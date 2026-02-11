@@ -25,10 +25,11 @@ export function Register({ userType }: RegisterProps) {
       await createUserWithEmailAndPassword(auth, email, password);
       toast({ title: "Registration Successful", description: "Your account has been created." });
       navigate(`/${userType}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }

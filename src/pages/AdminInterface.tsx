@@ -115,10 +115,11 @@ const AdminInterface = () => {
       await signOut(auth);
       toast({ title: "Logged Out", description: "Admin session ended." });
       navigate('/'); // Redirect to home after logout
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         title: "Error logging out",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }

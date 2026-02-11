@@ -25,10 +25,11 @@ export function Login({ userType }: LoginProps) {
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Login Successful", description: `Welcome back, ${userType}!` });
       navigate(`/${userType}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }
